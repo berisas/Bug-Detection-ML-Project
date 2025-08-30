@@ -1,10 +1,10 @@
-# BugRiskEvaluatorML
+# Bug Risk Evaluator ML
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)  
 [![Streamlit](https://img.shields.io/badge/Streamlit-app-orange)](https://streamlit.io/)  
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)  
 
-**BugRiskEvaluatorML** is a Streamlit-based machine learning project that predicts the risk of bugs in code commits and provides developer-specific insights to improve software quality.
+**Bug Risk Evaluator ML** is a Streamlit-based machine learning project that predicts the risk of bugs in code commits and provides developer-specific insights to improve software quality.
 
 ---
 
