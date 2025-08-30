@@ -53,7 +53,7 @@ cd BugDetectorML
 pip install -r requirements.txt
 ```
 
-### Running the App
+## Running the App
 streamlit run bug_detector_app.py
 
 ## 🛠 CSV Format
@@ -68,7 +68,7 @@ code_area: 0 = side module, 1 = core module
 
 label: 0 = no bug, 1 = bug
 
-### Generating Synthetic Data
+## Generating Synthetic Data
 
 Use the included script to generate synthetic commits:
 python generate_synthetic_csv.py
