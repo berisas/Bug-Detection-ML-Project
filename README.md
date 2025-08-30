@@ -45,10 +45,13 @@ cd BugDetectorML
 
 ## 📦 Installation
 
+
+```
 ### Install Dependencies
 
 ```bash
 pip install -r requirements.txt
+```
 
-🏃 Running the App
+## 🏃 Running the App
 streamlit run bug_detector_app.py
