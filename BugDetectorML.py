@@ -3,66 +3,122 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 import itertools
+import matplotlib.pyplot as plt
 
-# Title
-st.title("Bug Predictor")
+# --- Title ---
+st.title("Developer Analysis | Bug Rate")
 
-# Upload commits.csv
+# --- Upload Data ---
 uploaded = st.file_uploader("Upload commit history data (CSV format)", type="csv")
 
 if uploaded:
-    # Read data
     data = pd.read_csv(uploaded)
-    st.write("### Sample Data", data.head())
+    st.write("### Sample Data")
+    st.dataframe(data.head())
 
-    # Features and labels
+    # --- Features and Labels ---
     X = data.drop("label", axis=1)
     y = data["label"]
-    feature_names = X.columns.tolist()
+    categorical_cols = ["developer", "commit_type", "code_area"]
+    numeric_cols = [col for col in X.columns if col not in categorical_cols]
 
-    # Split into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_encoded = pd.get_dummies(X, columns=categorical_cols)
 
-    # Train RandomForest model
-    clf = RandomForestClassifier(n_estimators=100, random_state=42)
+    # --- Train/Test Split & Model ---
+    X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.2, random_state=42)
+    clf = RandomForestClassifier(n_estimators=300, random_state=42)
     clf.fit(X_train, y_train)
+    st.write("### Model Accuracy")
+    st.write(f"{clf.score(X_test, y_test):.2%}")
 
-    st.write("### Model Accuracy", clf.score(X_test, y_test))
+    # --- Feature Importance ---
+    st.write("### Feature Importance")
+    feat_importances = pd.Series(clf.feature_importances_, index=X_encoded.columns)
+    st.bar_chart(feat_importances.sort_values(ascending=False))
 
-    # Dynamically create inputs for all features
-    st.write("### Try a new commit")
-    user_input = {}
-    for feature in feature_names:
-        # Make a slider for numeric features
-        min_val = int(X[feature].min())
-        max_val = int(X[feature].max())
-        default_val = int(X[feature].median())
-        user_input[feature] = st.slider(feature, min_val, max_val, default_val)
+    # --- Suggested Safer Commits ---
+    st.write("### Suggested Safer Commits")
+    user_input = {col: int(X[col].median()) for col in numeric_cols}
+    user_input.update({col: X[col].mode()[0] for col in categorical_cols})
 
-    # Predict risk for original commit
-    input_values = [user_input[f] for f in feature_names]
-    original_risk = clf.predict_proba([input_values])[0][1]
-    st.write(f"Original commit risk: {original_risk:.2%}")
-
-    # Generate safer commit suggestions (<20% risk)
-    st.write("### Suggested safer commits (<20% risk)")
-
-    # Vary numeric functions
     variation_options = []
-    for feature in feature_names:
-        val = user_input[feature]
-        variation_options.append([max(int(X[feature].min()), val - 1), val, min(int(X[feature].max()), val + 1)])
+    for col in numeric_cols:
+        val = user_input[col]
+        min_val = max(int(X[col].min()), int(val * 0.5))
+        variation_options.append([min_val, val] if min_val != val else [val])
 
-    # Generate all combinations
+    numeric_combos = list(itertools.product(*variation_options))
+    categorical_combos = list(itertools.product(*[X[col].unique() for col in categorical_cols]))
+
     suggestions = []
-    for combo in itertools.product(*variation_options):
-        risk = clf.predict_proba([list(combo)])[0][1]
-        if risk <= 0.20:
-            suggestions.append(list(combo) + [risk])
+    for num_combo in numeric_combos:
+        for cat_combo in categorical_combos:
+            combo_dict = {col: val for col, val in zip(numeric_cols, num_combo)}
+            combo_dict.update({col: val for col, val in zip(categorical_cols, cat_combo)})
 
-    # Display suggestions
+            combo_encoded = pd.get_dummies(pd.DataFrame([combo_dict]))
+            combo_encoded = combo_encoded.reindex(columns=X_encoded.columns, fill_value=0)
+
+            proba = clf.predict_proba(combo_encoded)[0]
+            idx = list(clf.classes_).index(1) if len(proba) > 1 else 0
+            risk = proba[idx] if len(proba) > 1 else float(clf.classes_[0] == 1)
+
+            if risk <= 0.40:
+                suggestions.append(list(num_combo) + list(cat_combo) + [risk])
+
     if suggestions:
-        suggestions_df = pd.DataFrame(suggestions, columns=feature_names + ["Predicted Risk"])
-        st.dataframe(suggestions_df.style.format({"Predicted Risk": "{:.2%}"}))
-    else:B
-    st.write("No safe commit suggestions found with <20% predicted risk.")
+        col_names = numeric_cols + categorical_cols + ["Predicted Risk"]
+        st.dataframe(pd.DataFrame(suggestions, columns=col_names).style.format({"Predicted Risk": "{:.2%}"}))
+    else:
+        st.write("No safe commit suggestions found under 40% predicted risk.")
+
+    # --- Developer-specific Safe Patterns ---
+    st.write("### Developer-specific Safe Patterns")
+    commit_type_map = {0: "new feature/refactor", 1: "bug fix"}
+    code_area_map = {0: "side module", 1: "core module"}
+
+    for dev in data["developer"].unique():
+        low_risk = data[(data["developer"] == dev) & (data["label"] == 0)]
+        if low_risk.empty:
+            continue
+
+        tip_parts = []
+        for col in numeric_cols:
+            q25, q75 = int(low_risk[col].quantile(0.25)), int(low_risk[col].quantile(0.75))
+            if col == "lines_changed":
+                tip_parts.append(f"changing between {q25}-{q75} lines of code")
+            elif col == "files_changed":
+                tip_parts.append(f"modifying {q25}-{q75} files")
+            elif col == "message_length":
+                tip_parts.append(f"writing commit messages of {q25}-{q75} words")
+
+        cat_parts = []
+        for col, mapping in [("commit_type", commit_type_map), ("code_area", code_area_map)]:
+            mode_val = low_risk[col].mode()[0]
+            cat_parts.append(f"{col.replace('_',' ').title()} as '{mapping[mode_val]}'")
+
+        st.write(f"**{dev}** performs best when {', '.join(tip_parts)}; optimal conditions include {', '.join(cat_parts)}.")
+
+    # --- Experiment Section ---
+    with st.expander("Experiment: Try a New Commit"):
+        for col in numeric_cols:
+            min_val, max_val = int(X[col].min()), int(X[col].max())
+            default_val = user_input[col]
+            user_input[col] = st.slider(col, min_val, max_val, default_val) if min_val != max_val else min_val
+
+        for col in categorical_cols:
+            options = X[col].unique()
+            default_idx = list(options).index(user_input[col])
+            user_input[col] = st.selectbox(col, options=options, index=default_idx)
+
+        input_encoded = pd.get_dummies(pd.DataFrame([user_input]))
+        input_encoded = input_encoded.reindex(columns=X_encoded.columns, fill_value=0)
+
+        proba = clf.predict_proba(input_encoded)[0]
+        idx = list(clf.classes_).index(1) if len(proba) > 1 else 0
+        user_risk = proba[idx] if len(proba) > 1 else float(clf.classes_[0] == 1)
+        st.write(f"Predicted risk: {user_risk:.2%}")
+
+        top_features = feat_importances[numeric_cols].sort_values(ascending=False).head(3)
+        st.write("Top numeric features contributing to risk:")
+        st.write(top_features)
