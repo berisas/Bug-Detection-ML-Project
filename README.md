@@ -42,3 +42,13 @@
 ```bash
 git clone https://github.com/<your-username>/BugDetectorML.git
 cd BugDetectorML
+
+## 📦 Installation
+
+### Install Dependencies
+
+```bash
+pip install -r requirements.txt
+
+🏃 Running the App
+streamlit run bug_detector_app.py
