@@ -5,10 +5,10 @@ from sklearn.model_selection import train_test_split
 import itertools
 
 # Title
-st.title("Bug-Aware Commit Advisor")
+st.title("Bug Predictor")
 
 # Upload commits.csv
-uploaded = st.file_uploader("Upload commits.csv", type="csv")
+uploaded = st.file_uploader("Upload commit history data (CSV format)", type="csv")
 
 if uploaded:
     # Read data
@@ -18,8 +18,7 @@ if uploaded:
     # Features and labels
     X = data.drop("label", axis=1)
     y = data["label"]
-
-    feature_names = X.columns.tolist()  # Get all feature names
+    feature_names = X.columns.tolist()
 
     # Split into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -48,7 +47,7 @@ if uploaded:
     # Generate safer commit suggestions (<20% risk)
     st.write("### Suggested safer commits (<20% risk)")
 
-    # For simplicity, only vary numeric features slightly
+    # Vary numeric functions
     variation_options = []
     for feature in feature_names:
         val = user_input[feature]
