@@ -53,5 +53,26 @@ cd BugDetectorML
 pip install -r requirements.txt
 ```
 
-## 🏃 Running the App
+### Running the App
 streamlit run bug_detector_app.py
+
+## 🛠 CSV Format
+
+Input CSV should have the following columns:
+
+lines_changed, files_changed, message_length, developer, developer_bug_rate, commit_type, code_area, label
+
+commit_type: 0 = new feature/refactor, 1 = bug fix
+
+code_area: 0 = side module, 1 = core module
+
+label: 0 = no bug, 1 = bug
+
+### Generating Synthetic Data
+
+Use the included script to generate synthetic commits:
+python generate_synthetic_csv.py
+
+Developer-specific bug rates can be set to simulate realistic behavior.
+
+
